@@ -245,15 +245,21 @@ wss.on('connection', (ws) => {
         requestedRole === 'instructor' && msg.moderatorPassword === MODERATOR_PASSWORD;
       const verifiedRole = isModerator ? 'instructor' : 'participant';
 
+      const existing = room.participants.get(currentClientId);
+      if (room.emptyCleanupTimer) {
+        clearTimeout(room.emptyCleanupTimer);
+        room.emptyCleanupTimer = null;
+      }
+
       room.sockets.set(currentClientId, ws);
       room.participants.set(currentClientId, {
         id: currentClientId,
-        name: msg.name || 'Trader',
+        name: msg.name || existing?.name || 'Trader',
         role: verifiedRole,
-        startingCash: msg.startingCash || 1000000,
-        equity: msg.equity ?? msg.startingCash ?? 1000000,
-        returnPct: msg.returnPct ?? 0,
-        trades: msg.trades ?? 0,
+        startingCash: msg.startingCash || existing?.startingCash || 1000000,
+        equity: msg.equity ?? existing?.equity ?? msg.startingCash ?? 1000000,
+        returnPct: msg.returnPct ?? existing?.returnPct ?? 0,
+        trades: msg.trades ?? existing?.trades ?? 0,
       });
 
       broadcastRoomState(room);
@@ -370,14 +376,28 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (currentRoom && currentClientId) {
       currentRoom.sockets.delete(currentClientId);
-      currentRoom.participants.delete(currentClientId);
+      const disconnectedId = currentClientId;
+      const room = currentRoom;
 
-      if (currentRoom.sockets.size === 0) {
-        stopRoomTimer(currentRoom);
-        rooms.delete(currentRoom.code);
-      } else {
-        broadcastRoomState(currentRoom);
-      }
+      // 10-second grace period before removing participant to allow instant page refresh
+      setTimeout(() => {
+        if (!room.sockets.has(disconnectedId)) {
+          room.participants.delete(disconnectedId);
+          if (room.sockets.size === 0) {
+            stopRoomTimer(room);
+            // Allow 10 minutes before deleting room state
+            if (!room.emptyCleanupTimer) {
+              room.emptyCleanupTimer = setTimeout(() => {
+                if (room.sockets.size === 0) {
+                  rooms.delete(room.code);
+                }
+              }, 10 * 60 * 1000);
+            }
+          } else {
+            broadcastRoomState(room);
+          }
+        }
+      }, 10000);
     }
   });
 });

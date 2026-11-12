@@ -70,8 +70,29 @@ const OSCILLATOR_OPTIONS = [
   { id: null, label: 'Hide' },
 ];
 
+const STORAGE_SESSION_KEY = 'tradelab_session';
+const STORAGE_PORTFOLIO_KEY = 'tradelab_portfolio';
+
+function loadSavedSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadSavedPortfolio() {
+  try {
+    const raw = localStorage.getItem(STORAGE_PORTFOLIO_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
-  const [participant, setParticipant] = useState(null);
+  const [participant, setParticipant] = useState(() => loadSavedSession());
   const [selectedSymbol, setSelectedSymbol] = useState('RELIANCE');
 
   // Simulation playback state (synced from server when connected)
@@ -94,11 +115,27 @@ export default function App() {
   const [showGuide, setShowGuide] = useState(false);
   const [showTips, setShowTips] = useState(true);
 
-  // Portfolio & trading state
-  const [cash, setCash] = useState(1000000);
-  const [holdings, setHoldings] = useState({});
-  const [orders, setOrders] = useState([]);
-  const [realizedPnl, setRealizedPnl] = useState(0);
+  // Portfolio & trading state (persisted across page refreshes)
+  const [cash, setCash] = useState(() => {
+    const initialSession = loadSavedSession();
+    const saved = initialSession ? loadSavedPortfolio() : null;
+    return saved?.cash ?? (initialSession?.startingCash || 1000000);
+  });
+  const [holdings, setHoldings] = useState(() => {
+    const initialSession = loadSavedSession();
+    const saved = initialSession ? loadSavedPortfolio() : null;
+    return saved?.holdings ?? {};
+  });
+  const [orders, setOrders] = useState(() => {
+    const initialSession = loadSavedSession();
+    const saved = initialSession ? loadSavedPortfolio() : null;
+    return saved?.orders ?? [];
+  });
+  const [realizedPnl, setRealizedPnl] = useState(() => {
+    const initialSession = loadSavedSession();
+    const saved = initialSession ? loadSavedPortfolio() : null;
+    return saved?.realizedPnl ?? 0;
+  });
   const [activeTab, setActiveTab] = useState('trade');
 
   // Notifications & WebSocket room state
@@ -108,7 +145,18 @@ export default function App() {
   const [participantCount, setParticipantCount] = useState(1);
 
   const wsRef = useRef(null);
-  const [clientId] = useState(() => `trader-${Math.random().toString(36).slice(2, 10)}`);
+  const [clientId] = useState(() => {
+    try {
+      let id = localStorage.getItem('tradelab_client_id');
+      if (!id) {
+        id = `trader-${Math.random().toString(36).slice(2, 10)}`;
+        localStorage.setItem('tradelab_client_id', id);
+      }
+      return id;
+    } catch {
+      return `trader-${Math.random().toString(36).slice(2, 10)}`;
+    }
+  });
 
   const addToast = useCallback((message, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -120,6 +168,12 @@ export default function App() {
 
   // Join handler
   const handleJoin = (info) => {
+    try {
+      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(info));
+      localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+    } catch {
+      // ignore
+    }
     setParticipant(info);
     setCash(info.startingCash);
     setHoldings({});
@@ -213,6 +267,27 @@ export default function App() {
     return cash + holdingsVal;
   }, [cash, holdings, currentPrices]);
 
+  const totalEquityRef = useRef(totalEquity);
+  const ordersCountRef = useRef(orders.length);
+
+  useEffect(() => {
+    totalEquityRef.current = totalEquity;
+    ordersCountRef.current = orders.length;
+  }, [totalEquity, orders.length]);
+
+  // Persist portfolio state to localStorage
+  useEffect(() => {
+    if (!participant) return;
+    try {
+      localStorage.setItem(
+        STORAGE_PORTFOLIO_KEY,
+        JSON.stringify({ cash, holdings, orders, realizedPnl })
+      );
+    } catch {
+      // ignore
+    }
+  }, [participant, cash, holdings, orders, realizedPnl]);
+
   // Connect to shared WebSocket room server
   useEffect(() => {
     if (!participant) return;
@@ -224,6 +299,13 @@ export default function App() {
 
     ws.onopen = () => {
       setWsConnected(true);
+      const eq = totalEquityRef.current;
+      const ords = ordersCountRef.current;
+      const returnPct =
+        participant.startingCash > 0
+          ? ((eq - participant.startingCash) / participant.startingCash) * 100
+          : 0;
+
       ws.send(
         JSON.stringify({
           type: 'JOIN',
@@ -233,9 +315,9 @@ export default function App() {
           moderatorPassword: participant.moderatorPassword,
           roomCode: participant.roomCode,
           startingCash: participant.startingCash,
-          equity: participant.startingCash,
-          returnPct: 0,
-          trades: 0,
+          equity: eq,
+          returnPct,
+          trades: ords,
           maxCandles,
         })
       );
@@ -282,6 +364,11 @@ export default function App() {
         setLiveLeaderboard(msg.leaderboard || []);
         if (msg.participantCount) setParticipantCount(msg.participantCount);
       } else if (msg.type === 'ROOM_RESET') {
+        try {
+          localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+        } catch {
+          // ignore
+        }
         setCash(participant.startingCash);
         setHoldings({});
         setOrders([]);
@@ -921,9 +1008,15 @@ export default function App() {
 
           <button
             className="toolbar-btn"
-            title="Leave workshop"
+            title="Leave workshop & log out"
             onClick={() => {
               setIsPlaying(false);
+              try {
+                localStorage.removeItem(STORAGE_SESSION_KEY);
+                localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+              } catch {
+                // ignore
+              }
               setParticipant(null);
             }}
           >
