@@ -64,37 +64,43 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 6px 14px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  height: 52px;
+  min-height: 52px;
+  height: auto;
   flex-shrink: 0;
+  gap: 10px;
 }
 
 .app-header .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 18px;
+  gap: 8px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--accent-blue);
+  flex-shrink: 0;
 }
 
 .app-header .logo svg {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 
 .header-center {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .app-main {

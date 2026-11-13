@@ -12,6 +12,7 @@ const PORT = Number(process.env.PORT) || 4000;
 const INITIAL_CANDLES = 375; // 5 full trading days (1 week) * 75 candles
 const DEFAULT_MAX_CANDLES = 2250; // 30 trading days * 75 candles
 const MODERATOR_PASSWORD = '0000';
+const MAX_MODERATORS = 2; // Allow up to 2 moderators at a time
 
 const PHASES = [
   { day: 1, startCandle: 375, endCandle: 449, name: 'Day 1: Pure Technical Moves', hasNews: false, showPatterns: false },
@@ -253,23 +254,22 @@ wss.on('connection', (ws) => {
           return;
         }
 
-        // Check if another moderator is already actively connected
-        let activeMod = null;
+        // Check how many other moderators are actively connected with open sockets
+        const otherActiveMods = [];
         for (const p of room.participants.values()) {
           if (p.role === 'instructor' && p.id !== currentClientId) {
             const modSocket = room.sockets.get(p.id);
             if (modSocket && modSocket.readyState === 1) {
-              activeMod = p;
-              break;
+              otherActiveMods.push(p);
             }
           }
         }
 
-        if (activeMod) {
+        if (otherActiveMods.length >= MAX_MODERATORS) {
           ws.send(
             JSON.stringify({
               type: 'JOIN_ERROR',
-              message: `A moderator (${activeMod.name}) is already active in this session. Only 1 moderator is allowed at a time.`,
+              message: `Maximum of ${MAX_MODERATORS} moderators are already active (${otherActiveMods.map((m) => m.name).join(', ')}). Only ${MAX_MODERATORS} moderators are allowed at a time.`,
             })
           );
           return;

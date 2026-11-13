@@ -75,7 +75,9 @@ const STORAGE_PORTFOLIO_KEY = 'tradelab_portfolio';
 
 function loadSavedSession() {
   try {
-    const raw = localStorage.getItem(STORAGE_SESSION_KEY);
+    const raw =
+      sessionStorage.getItem(STORAGE_SESSION_KEY) ||
+      localStorage.getItem(STORAGE_SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -84,7 +86,9 @@ function loadSavedSession() {
 
 function loadSavedPortfolio() {
   try {
-    const raw = localStorage.getItem(STORAGE_PORTFOLIO_KEY);
+    const raw =
+      sessionStorage.getItem(STORAGE_PORTFOLIO_KEY) ||
+      localStorage.getItem(STORAGE_PORTFOLIO_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -147,10 +151,10 @@ export default function App() {
   const wsRef = useRef(null);
   const [clientId] = useState(() => {
     try {
-      let id = localStorage.getItem('tradelab_client_id');
+      let id = sessionStorage.getItem('tradelab_client_id');
       if (!id) {
         id = `trader-${Math.random().toString(36).slice(2, 10)}`;
-        localStorage.setItem('tradelab_client_id', id);
+        sessionStorage.setItem('tradelab_client_id', id);
       }
       return id;
     } catch {
@@ -179,8 +183,12 @@ export default function App() {
       wsRef.current.close();
     }
     try {
+      sessionStorage.removeItem(STORAGE_SESSION_KEY);
+      sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+      sessionStorage.removeItem('tradelab_client_id');
       localStorage.removeItem(STORAGE_SESSION_KEY);
       localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+      localStorage.removeItem('tradelab_client_id');
     } catch {
       // ignore
     }
@@ -192,7 +200,9 @@ export default function App() {
   const handleJoin = (info) => {
     setLoginError('');
     try {
+      sessionStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(info));
       localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(info));
+      sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
       localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
     } catch {
       // ignore
@@ -298,14 +308,13 @@ export default function App() {
     ordersCountRef.current = orders.length;
   }, [totalEquity, orders.length]);
 
-  // Persist portfolio state to localStorage
+  // Persist portfolio state to storage
   useEffect(() => {
     if (!participant) return;
     try {
-      localStorage.setItem(
-        STORAGE_PORTFOLIO_KEY,
-        JSON.stringify({ cash, holdings, orders, realizedPnl })
-      );
+      const data = JSON.stringify({ cash, holdings, orders, realizedPnl });
+      sessionStorage.setItem(STORAGE_PORTFOLIO_KEY, data);
+      localStorage.setItem(STORAGE_PORTFOLIO_KEY, data);
     } catch {
       // ignore
     }
@@ -356,6 +365,8 @@ export default function App() {
 
       if (msg.type === 'JOIN_ERROR') {
         try {
+          sessionStorage.removeItem(STORAGE_SESSION_KEY);
+          sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
           localStorage.removeItem(STORAGE_SESSION_KEY);
           localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
         } catch {
@@ -401,6 +412,7 @@ export default function App() {
         if (msg.participantCount) setParticipantCount(msg.participantCount);
       } else if (msg.type === 'ROOM_RESET') {
         try {
+          sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
           localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
         } catch {
           // ignore
@@ -957,18 +969,32 @@ export default function App() {
 
               <div className="toolbar-separator" />
 
-              <span className="speed-label">Speed</span>
-              {SPEED_OPTIONS.map((opt) => (
-                <button
-                  key={opt.label}
-                  className={`toolbar-btn ${speedMultiplier === opt.mult ? 'active' : ''}`}
-                  onClick={() =>
-                    sendControl('SET_SPEED', { speedMs: opt.ms, multiplier: opt.mult })
-                  }
-                >
-                  {opt.label}
-                </button>
-              ))}
+              <span className="speed-label" style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Speed:</span>
+              <select
+                className="toolbar-btn"
+                value={speedMultiplier}
+                onChange={(e) => {
+                  const mult = Number(e.target.value);
+                  const opt = SPEED_OPTIONS.find((o) => o.mult === mult) || SPEED_OPTIONS[0];
+                  sendControl('SET_SPEED', { speedMs: opt.ms, multiplier: opt.mult });
+                }}
+                style={{
+                  background: '#151c2c',
+                  color: '#93c5fd',
+                  borderColor: '#3b82f6',
+                  fontWeight: 600,
+                  fontSize: 12,
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                {SPEED_OPTIONS.map((opt) => (
+                  <option key={opt.mult} value={opt.mult} style={{ background: '#0f172a', color: '#fff' }}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
 
               <div className="toolbar-separator" />
 
@@ -1081,13 +1107,15 @@ export default function App() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                background: 'rgba(239, 68, 68, 0.18)',
+                background: '#dc2626',
                 borderColor: '#ef4444',
-                color: '#f87171',
-                fontWeight: 700,
+                color: '#ffffff',
+                fontWeight: 800,
                 padding: '6px 14px',
                 borderRadius: 6,
                 cursor: 'pointer',
+                flexShrink: 0,
+                boxShadow: '0 0 10px rgba(220, 38, 38, 0.45)',
               }}
             >
               <LogOut size={15} />
@@ -1196,6 +1224,45 @@ export default function App() {
       <div className={`app-main ${isChartExpanded ? 'chart-expanded' : ''}`}>
         {/* Left Sidebar: Watchlist */}
         <aside className="sidebar">
+          {isInstructor && (
+            <div
+              style={{
+                padding: '10px 12px',
+                background: 'rgba(239, 68, 68, 0.12)',
+                borderBottom: '1px solid rgba(239, 68, 68, 0.35)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#f87171' }}>MODERATOR MODE</span>
+                <span style={{ fontSize: 10, color: '#94a3b8' }}>Room: {participant.roomCode}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 5,
+                  padding: '7px 10px',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(220, 38, 38, 0.4)',
+                }}
+              >
+                <LogOut size={14} />
+                <span>Exit Moderator Session</span>
+              </button>
+            </div>
+          )}
           <div className="current-stock-info">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="current-stock-name">{currentStock.symbol}</div>
