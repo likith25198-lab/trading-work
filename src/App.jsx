@@ -166,8 +166,31 @@ export default function App() {
     }, 3200);
   }, []);
 
+  const [loginError, setLoginError] = useState('');
+
+  const handleLogout = useCallback(() => {
+    setIsPlaying(false);
+    if (wsRef.current && wsRef.current.readyState === 1) {
+      try {
+        wsRef.current.send(JSON.stringify({ type: 'LEAVE', clientId }));
+      } catch {
+        // ignore
+      }
+      wsRef.current.close();
+    }
+    try {
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+    } catch {
+      // ignore
+    }
+    setParticipant(null);
+    setLoginError('');
+  }, [clientId]);
+
   // Join handler
   const handleJoin = (info) => {
+    setLoginError('');
     try {
       localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(info));
       localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
@@ -328,6 +351,19 @@ export default function App() {
       try {
         msg = JSON.parse(event.data);
       } catch {
+        return;
+      }
+
+      if (msg.type === 'JOIN_ERROR') {
+        try {
+          localStorage.removeItem(STORAGE_SESSION_KEY);
+          localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+        } catch {
+          // ignore
+        }
+        setParticipant(null);
+        setLoginError(msg.message || 'Access denied');
+        addToast(msg.message || 'Access denied', 'error');
         return;
       }
 
@@ -620,7 +656,7 @@ export default function App() {
   };
 
   if (!participant) {
-    return <JoinScreen onJoin={handleJoin} />;
+    return <JoinScreen onJoin={handleJoin} initialError={loginError} />;
   }
 
   const isInstructor = participant.role === 'instructor';
@@ -993,35 +1029,86 @@ export default function App() {
             Indicator Guide
           </button>
 
-          <div className="participant-badge">
-            <div className="participant-avatar">
+          <div
+            className="participant-badge"
+            style={
+              isInstructor
+                ? {
+                    borderColor: '#8b5cf6',
+                    background: 'rgba(139, 92, 246, 0.12)',
+                  }
+                : undefined
+            }
+          >
+            <div
+              className="participant-avatar"
+              style={isInstructor ? { background: '#8b5cf6' } : undefined}
+            >
               {participant.name.charAt(0).toUpperCase()}
             </div>
             <span>{participant.name}</span>
-            <span
-              className={totalPnl >= 0 ? 'positive' : 'negative'}
-              style={{ fontWeight: 700, marginLeft: 4 }}
-            >
-              {formatCurrency(totalEquity)} ({formatPercent(totalReturnPct)})
-            </span>
+            {isInstructor ? (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: '2px 7px',
+                  borderRadius: 4,
+                  background: '#8b5cf6',
+                  color: '#fff',
+                  marginLeft: 4,
+                  letterSpacing: '0.5px',
+                }}
+              >
+                MODERATOR
+              </span>
+            ) : (
+              <span
+                className={totalPnl >= 0 ? 'positive' : 'negative'}
+                style={{ fontWeight: 700, marginLeft: 4 }}
+              >
+                {formatCurrency(totalEquity)} ({formatPercent(totalReturnPct)})
+              </span>
+            )}
           </div>
 
-          <button
-            className="toolbar-btn"
-            title="Leave workshop & log out"
-            onClick={() => {
-              setIsPlaying(false);
-              try {
-                localStorage.removeItem(STORAGE_SESSION_KEY);
-                localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
-              } catch {
-                // ignore
-              }
-              setParticipant(null);
-            }}
-          >
-            <LogOut size={14} />
-          </button>
+          {isInstructor ? (
+            <button
+              className="toolbar-btn"
+              title="Exit Moderator control panel & return to login page"
+              onClick={handleLogout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(239, 68, 68, 0.18)',
+                borderColor: '#ef4444',
+                color: '#f87171',
+                fontWeight: 700,
+                padding: '6px 14px',
+                borderRadius: 6,
+                cursor: 'pointer',
+              }}
+            >
+              <LogOut size={15} />
+              <span>Exit Moderator</span>
+            </button>
+          ) : (
+            <button
+              className="toolbar-btn"
+              title="Leave workshop & log out"
+              onClick={handleLogout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+              }}
+            >
+              <LogOut size={14} />
+              <span>Exit</span>
+            </button>
+          )}
         </div>
       </header>
 

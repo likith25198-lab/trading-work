@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { TrendingUp, BarChart3, Zap, Users, ShieldCheck } from 'lucide-react';
 
-export default function JoinScreen({ onJoin }) {
+export default function JoinScreen({ onJoin, initialError = '' }) {
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('WORKSHOP-101');
   const [startingCash, setStartingCash] = useState(1000000);
   const [role, setRole] = useState('participant');
   const [moderatorPassword, setModeratorPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  const displayError = initialError || passwordError;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -68,6 +70,25 @@ export default function JoinScreen({ onJoin }) {
             Educational Sandbox • Virtual Money Only
           </span>
         </div>
+
+        {displayError && (
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid #ef4444',
+              color: '#f87171',
+              fontSize: 12,
+              fontWeight: 600,
+              marginBottom: 16,
+              textAlign: 'center',
+              lineHeight: 1.4,
+            }}
+          >
+            {displayError}
+          </div>
+        )}
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="trade-input-group">

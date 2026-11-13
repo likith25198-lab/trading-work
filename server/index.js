@@ -241,9 +241,42 @@ wss.on('connection', (ws) => {
       currentClientId = msg.clientId;
 
       const requestedRole = msg.role || 'participant';
-      const isModerator =
-        requestedRole === 'instructor' && msg.moderatorPassword === MODERATOR_PASSWORD;
-      const verifiedRole = isModerator ? 'instructor' : 'participant';
+
+      if (requestedRole === 'instructor') {
+        if (msg.moderatorPassword !== MODERATOR_PASSWORD) {
+          ws.send(
+            JSON.stringify({
+              type: 'JOIN_ERROR',
+              message: 'Incorrect Moderator password. Please enter the correct PIN.',
+            })
+          );
+          return;
+        }
+
+        // Check if another moderator is already actively connected
+        let activeMod = null;
+        for (const p of room.participants.values()) {
+          if (p.role === 'instructor' && p.id !== currentClientId) {
+            const modSocket = room.sockets.get(p.id);
+            if (modSocket && modSocket.readyState === 1) {
+              activeMod = p;
+              break;
+            }
+          }
+        }
+
+        if (activeMod) {
+          ws.send(
+            JSON.stringify({
+              type: 'JOIN_ERROR',
+              message: `A moderator (${activeMod.name}) is already active in this session. Only 1 moderator is allowed at a time.`,
+            })
+          );
+          return;
+        }
+      }
+
+      const verifiedRole = requestedRole === 'instructor' ? 'instructor' : 'participant';
 
       const existing = room.participants.get(currentClientId);
       if (room.emptyCleanupTimer) {
@@ -267,6 +300,13 @@ wss.on('connection', (ws) => {
     }
 
     if (!currentRoom || !currentClientId) return;
+
+    if (msg.type === 'LEAVE') {
+      currentRoom.sockets.delete(currentClientId);
+      currentRoom.participants.delete(currentClientId);
+      broadcastRoomState(currentRoom);
+      return;
+    }
 
     if (msg.type === 'PORTFOLIO_UPDATE') {
       const p = currentRoom.participants.get(currentClientId);
