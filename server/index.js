@@ -21,7 +21,7 @@ const PHASES = [
   { day: 4, startCandle: 600, endCandle: 674, name: 'Day 4: Competition Grand Finale', hasNews: true, showPatterns: true },
 ];
 const COMPETITION_END_CANDLE = 674;
-const BASE_SPEED_MS = 6400; // 75 candles * 6.4s = 480s (exactly 8 minutes per trading day)
+const BASE_SPEED_MS = 16000; // 75 candles * 16s = 1200s (exactly 20 minutes per trading day)
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -92,7 +92,7 @@ function getOrCreateRoom(roomCode, maxCandles = DEFAULT_MAX_CANDLES) {
       simIndex: INITIAL_CANDLES,
       maxCandles,
       isPlaying: false,
-      speedMs: BASE_SPEED_MS, // 6400ms = 8 minutes per 75-candle day at 1x
+      speedMs: BASE_SPEED_MS, // 16000ms = 20 minutes per 75-candle day at 1x
       speedMultiplier: 1,
       isPhaseBreak: false,
       phaseBreakDay: null,
@@ -373,7 +373,7 @@ wss.on('connection', (ws) => {
           currentRoom.speedMultiplier = mult;
           currentRoom.speedMs = Math.max(50, Math.round(BASE_SPEED_MS / mult));
         } else if (msg.speedMs) {
-          currentRoom.speedMs = Math.max(50, Math.min(10000, Number(msg.speedMs) || 6400));
+          currentRoom.speedMs = Math.max(50, Math.min(30000, Number(msg.speedMs) || BASE_SPEED_MS));
           currentRoom.speedMultiplier = Math.round((BASE_SPEED_MS / currentRoom.speedMs) * 10) / 10;
         }
         if (currentRoom.isPlaying) {

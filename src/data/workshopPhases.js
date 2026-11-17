@@ -1,5 +1,5 @@
 // Workshop Phases & Day Structure Configuration
-// 4 distinct trading days, each exactly 8 minutes long with study breaks in between
+// 4 distinct trading days, each exactly 20 minutes long with study breaks in between
 
 export const WORKSHOP_PHASES = [
   {
@@ -11,7 +11,7 @@ export const WORKSHOP_PHASES = [
     endCandle: 449, // 75 candles
     hasNews: false,
     showPatterns: false,
-    durationSeconds: 480, // exactly 8 minutes
+    durationSeconds: 1200, // exactly 20 minutes
     themeColor: '#3b82f6',
     objective:
       'Starting easy: Prices move purely on technical indicators, moving averages (SMA 20/50), VWAP, and support/resistance bounces. Zero news distractions.',
@@ -27,7 +27,7 @@ export const WORKSHOP_PHASES = [
     endCandle: 524, // 75 candles
     hasNews: true,
     showPatterns: true,
-    durationSeconds: 480, // exactly 8 minutes
+    durationSeconds: 1200, // exactly 20 minutes
     themeColor: '#10b981',
     objective:
       'Sector news arrives and directly impacts company stock prices! Candlestick patterns (Hammers, Bullish/Bearish Engulfing, Dojis) begin triggering on chart.',
@@ -43,7 +43,7 @@ export const WORKSHOP_PHASES = [
     endCandle: 599, // 75 candles
     hasNews: true,
     showPatterns: true,
-    durationSeconds: 480, // exactly 8 minutes
+    durationSeconds: 1200, // exactly 20 minutes
     themeColor: '#f59e0b',
     objective:
       'Macroeconomic shocks (Crude Oil jumps, bond yield shifts, inflation prints) cause divergent market reactions across sectors.',
@@ -59,7 +59,7 @@ export const WORKSHOP_PHASES = [
     endCandle: 674, // 75 candles
     hasNews: true,
     showPatterns: true,
-    durationSeconds: 480, // exactly 8 minutes
+    durationSeconds: 1200, // exactly 20 minutes
     themeColor: '#ec4899',
     objective:
       'The decisive final session! GDP surprises and corporate earnings wave. Manage portfolio risk as participants battle for 1st place on the leaderboard.',

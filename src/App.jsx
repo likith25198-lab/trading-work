@@ -44,12 +44,12 @@ import NewsPanel from './components/NewsPanel';
 import IndicatorGuideModal from './components/IndicatorGuideModal';
 
 const SPEED_OPTIONS = [
-  { label: '1x (8m)', ms: 6400, mult: 1 },
-  { label: '2x (4m)', ms: 3200, mult: 2 },
-  { label: '4x (2m)', ms: 1600, mult: 4 },
-  { label: '8x (1m)', ms: 800, mult: 8 },
-  { label: '16x (30s)', ms: 400, mult: 16 },
-  { label: '32x (15s)', ms: 200, mult: 32 },
+  { label: '1x (20m)', ms: 16000, mult: 1 },
+  { label: '2x (10m)', ms: 8000, mult: 2 },
+  { label: '4x (5m)', ms: 4000, mult: 4 },
+  { label: '8x (2.5m)', ms: 2000, mult: 8 },
+  { label: '16x (1.25m)', ms: 1000, mult: 16 },
+  { label: '32x (38s)', ms: 500, mult: 32 },
 ];
 
 const OVERLAY_OPTIONS = [
@@ -103,7 +103,7 @@ export default function App() {
   const maxCandles = STOCKS.RELIANCE.data.length;
   const [simIndex, setSimIndex] = useState(SIM_INITIAL_CANDLES);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speedMs, setSpeedMs] = useState(6400);
+  const [speedMs, setSpeedMs] = useState(16000);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [isPhaseBreak, setIsPhaseBreak] = useState(false);
   const [phaseBreakDay, setPhaseBreakDay] = useState(null);
@@ -232,7 +232,7 @@ export default function App() {
 
   const secondsRemainingInDay = useMemo(() => {
     if (currentPhase.day < 1 || currentPhase.day > 4) return 0;
-    return Math.max(0, Math.round((candlesRemainingInDay / 75) * 480));
+    return Math.max(0, Math.round((candlesRemainingInDay / 75) * 1200));
   }, [candlesRemainingInDay, currentPhase]);
 
   const formatPhaseTime = (sec) => {
@@ -1703,6 +1703,7 @@ export default function App() {
                 visibleNews={visibleNews}
                 selectedSymbol={selectedSymbol}
                 currentDay={currentPhase.day}
+                stockList={STOCK_LIST}
                 onSelectStock={(sym) => {
                   setSelectedSymbol(sym);
                 }}

@@ -6,9 +6,17 @@ export default function NewsPanel({
   selectedSymbol,
   currentDay = 1,
   onSelectStock,
+  stockList = [],
 }) {
   const [filterType, setFilterType] = useState('all'); // 'all' | 'macro' | 'sector'
   const [stockFilter, setStockFilter] = useState('all');
+
+  const filterSymbols = [
+    'all',
+    ...(stockList.length > 0
+      ? stockList.map((s) => s.symbol)
+      : ['RELIANCE', 'TCS', 'TATAMOTORS', 'HDFCBANK', 'INFY', 'WIPRO', 'ICICIBANK', 'ITC', 'SBIN', 'BHARTIARTL', 'LT']),
+  ];
 
   const filteredNews = visibleNews.filter((item) => {
     if (filterType !== 'all' && item.type !== filterType) return false;
@@ -44,7 +52,7 @@ export default function NewsPanel({
           <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#64748b', letterSpacing: 0.5 }}>
             Filter:
           </span>
-          {['all', 'RELIANCE', 'TCS', 'TATAMOTORS', 'HDFCBANK', 'INFY', 'WIPRO'].map((sym) => (
+          {filterSymbols.map((sym) => (
             <button
               key={sym}
               className={`toolbar-btn ${stockFilter === sym ? 'active' : ''}`}

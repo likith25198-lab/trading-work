@@ -154,6 +154,46 @@ export const STOCKS = {
     description: 'Affordable per-share price for practicing position sizing and risk.',
     data: generateIntradayData('WIPRO', 648193, 465, 0.0052, 5, 30),
   },
+  ICICIBANK: {
+    symbol: 'ICICIBANK',
+    name: 'ICICI Bank Ltd',
+    sector: 'Banking',
+    color: '#f97316',
+    description: 'High-growth private banking leader with strong retail loan growth and momentum.',
+    data: generateIntradayData('ICICIBANK', 759204, 1080, 0.0048, 2, 30),
+  },
+  ITC: {
+    symbol: 'ITC',
+    name: 'ITC Ltd',
+    sector: 'FMCG',
+    color: '#14b8a6',
+    description: 'Defensive FMCG powerhouse — ideal for low-beta trend following and consolidation bases.',
+    data: generateIntradayData('ITC', 872019, 460, 0.0031, 5, 30),
+  },
+  SBIN: {
+    symbol: 'SBIN',
+    name: 'State Bank of India',
+    sector: 'PSU Banking',
+    color: '#0284c7',
+    description: 'India’s largest public sector lender — bellwether for credit expansion and interest rate cycles.',
+    data: generateIntradayData('SBIN', 983142, 785, 0.0055, 3, 30),
+  },
+  BHARTIARTL: {
+    symbol: 'BHARTIARTL',
+    name: 'Bharti Airtel Ltd',
+    sector: 'Telecom',
+    color: '#e11d48',
+    description: 'Telecom and 5G heavyweight driven by ARPU growth, tariff hikes, and digital services.',
+    data: generateIntradayData('BHARTIARTL', 361928, 1260, 0.0044, 4, 30),
+  },
+  LT: {
+    symbol: 'LT',
+    name: 'Larsen & Toubro Ltd',
+    sector: 'Infrastructure',
+    color: '#eab308',
+    description: 'Infrastructure and engineering colossus — high-conviction breakout trades on capex orders.',
+    data: generateIntradayData('LT', 492817, 3540, 0.0049, 1, 30),
+  },
 };
 
 export const STOCK_LIST = Object.values(STOCKS);
@@ -166,13 +206,31 @@ export const WORKSHOP_JUMP_POINTS = [
 ];
 
 export const WORKSHOP_NEWS_EVENTS = [
+  // --- DAY 2: SECTOR CATALYSTS & PATTERNS (Candles 450 - 524) ---
   {
     id: 'news-day2-1',
-    candleIndex: 470,
+    candleIndex: 462,
+    category: 'Telecom & Digital',
+    type: 'sector',
+    badgeColor: '#e11d48',
+    headline: 'TRAI Recommends 5G Tariff Floor & Spectrum Rationalization: Industry ARPU Poised for Double-Digit Growth',
+    summary:
+      'The telecom regulatory body released recommendations approving floor pricing mechanisms and rationalized spectrum usage fees, paving the way for sustainable Average Revenue Per User (ARPU) expansion.',
+    impactSummary: 'Strong Structural Tailwinds for Telecom Heavyweights',
+    impactedStocks: [
+      { symbol: 'BHARTIARTL', direction: 'BULLISH', effect: '+4.2% Tariff Hike & ARPU Expansion' },
+      { symbol: 'RELIANCE', direction: 'BULLISH', effect: '+2.5% Digital Services Monetization' },
+    ],
+    workshopTakeaway:
+      'Regulatory tariff reforms improve EBITDA margins across capital-intensive sectors. Watch for bullish hammer and morning star reversals bouncing off the 20-period moving average.',
+  },
+  {
+    id: 'news-day2-2',
+    candleIndex: 478,
     category: 'IT Sector',
     type: 'sector',
     badgeColor: '#3b82f6',
-    headline: 'US Enterprise Tech Spend Surges: Fortune 50 Inks $2.8B Multi-Year Cloud Contract',
+    headline: 'US Enterprise Tech Spend Surges: Fortune 50 Inks $2.8B Multi-Year Cloud & AI Contract',
     summary:
       'Leading North American enterprises raised their digital transformation and AI capex by 22% QoQ. Indian tier-1 IT firms secure key vendor consolidation bids.',
     impactSummary: 'Explosive Momentum across IT Services Blue-Chips',
@@ -185,8 +243,8 @@ export const WORKSHOP_NEWS_EVENTS = [
       'Sector-specific demand tailwinds create sector rotation rallies. Watch MACD histogram expand and EMA 12 cross above EMA 26 on IT stocks.',
   },
   {
-    id: 'news-day2-2',
-    candleIndex: 500,
+    id: 'news-day2-3',
+    candleIndex: 495,
     category: 'Automobile Sector',
     type: 'sector',
     badgeColor: '#10b981',
@@ -202,8 +260,27 @@ export const WORKSHOP_NEWS_EVENTS = [
       'Government policy subsidies generate decisive breakout candles. Look for candles piercing upper Bollinger Bands with 3x average volume.',
   },
   {
+    id: 'news-day2-4',
+    candleIndex: 512,
+    category: 'FMCG & Consumption',
+    type: 'sector',
+    badgeColor: '#14b8a6',
+    headline: 'Rural FMCG Demand Rebounds 14% on Bumper Rabi Harvest & Rising Disposable Incomes',
+    summary:
+      'Nielsen and consumer index reports confirmed strong double-digit volume recovery in semi-urban and rural markets following higher agricultural realizations and stable input costs.',
+    impactSummary: 'Volume Expansion for Consumer Staples & Retail Credit',
+    impactedStocks: [
+      { symbol: 'ITC', direction: 'BULLISH', effect: '+3.4% Rural Volume Surge' },
+      { symbol: 'ICICIBANK', direction: 'BULLISH', effect: '+2.1% Rural Credit Disbursal' },
+    ],
+    workshopTakeaway:
+      'Rural volume recoveries create steady accumulation bases. Look for golden crosses as SMA 20 crosses above SMA 50 with rising volume.',
+  },
+
+  // --- DAY 3: MACRO SHOCKS & COMMODITY VOLATILITY (Candles 525 - 599) ---
+  {
     id: 'news-day3-1',
-    candleIndex: 545,
+    candleIndex: 536,
     category: 'Macro & Commodity',
     type: 'macro',
     badgeColor: '#f97316',
@@ -221,7 +298,25 @@ export const WORKSHOP_NEWS_EVENTS = [
   },
   {
     id: 'news-day3-2',
-    candleIndex: 575,
+    candleIndex: 554,
+    category: 'Infra & Capital Goods',
+    type: 'sector',
+    badgeColor: '#eab308',
+    headline: 'National Rail & Expressways Corridor Awards Mega ₹48,000 Cr High-Speed EPC Contracts',
+    summary:
+      'The National Infrastructure Pipeline awarded mega contracts for dedicated high-speed rail lines and expressways, leading to historic order book additions for domestic engineering leaders.',
+    impactSummary: 'Order Book Boom for Construction & Project Lenders',
+    impactedStocks: [
+      { symbol: 'LT', direction: 'BULLISH', effect: '+5.4% Order Book All-Time High' },
+      { symbol: 'SBIN', direction: 'BULLISH', effect: '+2.8% Consortium Loan Disbursals' },
+      { symbol: 'TATAMOTORS', direction: 'BULLISH', effect: '+1.8% Commercial Tipper Orders' },
+    ],
+    workshopTakeaway:
+      'Mega infrastructure contract awards create gap-up breakouts above resistance lines (R1/R2). Trade the trend pullback to VWAP.',
+  },
+  {
+    id: 'news-day3-3',
+    candleIndex: 572,
     category: 'Macro Economics',
     type: 'macro',
     badgeColor: '#dc2626',
@@ -233,13 +328,33 @@ export const WORKSHOP_NEWS_EVENTS = [
       { symbol: 'TATAMOTORS', direction: 'BEARISH', effect: '-3.8% High-Beta Valuation Reset' },
       { symbol: 'INFY', direction: 'BEARISH', effect: '-3.2% Tech Growth Multiple Contraction' },
       { symbol: 'HDFCBANK', direction: 'BEARISH', effect: '-2.5% Bond Portfolio Mark-to-Market' },
+      { symbol: 'ICICIBANK', direction: 'BEARISH', effect: '-2.3% Cost of Deposits Pressure' },
     ],
     workshopTakeaway:
       'Macro inflation shocks trigger sharp selloffs. Watch RSI drop from overbought (>70) straight toward oversold (<30) as moving averages breakdown.',
   },
   {
+    id: 'news-day3-4',
+    candleIndex: 588,
+    category: 'Defensive & FMCG',
+    type: 'sector',
+    badgeColor: '#14b8a6',
+    headline: 'Institutional Flight to Safety: Capital Rotates into High-Dividend Defensive Leaders',
+    summary:
+      'Facing bond yield spikes and equity volatility, domestic mutual funds and pension funds rotated capital aggressively out of cyclicals into high-dividend, debt-free consumer staples.',
+    impactSummary: 'Defensive Inflow Sanctuary for Resilient Cash-Flow Kings',
+    impactedStocks: [
+      { symbol: 'ITC', direction: 'BULLISH', effect: '+3.6% Institutional Flight to Quality' },
+      { symbol: 'SBIN', direction: 'BEARISH', effect: '-1.8% Sovereign Yield Volatility' },
+    ],
+    workshopTakeaway:
+      'In volatile bear phases, smart money rotates into defensive FMCG. Notice how ITC decouples from broad index drops and breaks out.',
+  },
+
+  // --- DAY 4: COMPETITION GRAND FINALE (Candles 600 - 674) ---
+  {
     id: 'news-day4-1',
-    candleIndex: 620,
+    candleIndex: 612,
     category: 'Banking & Legal',
     type: 'sector',
     badgeColor: '#10b981',
@@ -249,6 +364,8 @@ export const WORKSHOP_NEWS_EVENTS = [
     impactSummary: 'Asset Quality Rebound for Heavyweight Financials',
     impactedStocks: [
       { symbol: 'HDFCBANK', direction: 'BULLISH', effect: '+4.2% Bad-Loan Recovery & Tier-1 Capital' },
+      { symbol: 'SBIN', direction: 'BULLISH', effect: '+4.8% Direct Provision Write-Back' },
+      { symbol: 'ICICIBANK', direction: 'BULLISH', effect: '+3.8% NIM Margin Expansion' },
       { symbol: 'RELIANCE', direction: 'BULLISH', effect: '+2.1% Strategic Asset Takeover' },
     ],
     workshopTakeaway:
@@ -256,7 +373,25 @@ export const WORKSHOP_NEWS_EVENTS = [
   },
   {
     id: 'news-day4-2',
-    candleIndex: 650,
+    candleIndex: 628,
+    category: 'Semiconductor & Tech',
+    type: 'sector',
+    badgeColor: '#38bdf8',
+    headline: 'Global Tech Consortium Finalizes $10B Semiconductor Fabrication Facility in India',
+    summary:
+      'An international consortium together with leading domestic conglomerates inked definitive agreements to break ground on a cutting-edge 28nm semiconductor wafer foundry and OSAT hub.',
+    impactSummary: 'Industrial EPC & High-Tech Infrastructure Multiplier',
+    impactedStocks: [
+      { symbol: 'LT', direction: 'BULLISH', effect: '+4.2% Cleanroom & EPC Construction' },
+      { symbol: 'TCS', direction: 'BULLISH', effect: '+3.1% Semiconductor Design & AI Systems' },
+      { symbol: 'BHARTIARTL', direction: 'BULLISH', effect: '+2.6% Dedicated Enterprise 5G Mesh' },
+    ],
+    workshopTakeaway:
+      'Mega high-tech CAPEX news creates sustained multi-hour trend continuation. Maintain trailing stop-losses just below EMA 12.',
+  },
+  {
+    id: 'news-day4-3',
+    candleIndex: 648,
     category: 'Macro Economics',
     type: 'macro',
     badgeColor: '#10b981',
@@ -268,9 +403,30 @@ export const WORKSHOP_NEWS_EVENTS = [
       { symbol: 'RELIANCE', direction: 'BULLISH', effect: '+3.7% Industrial Demand Rebound' },
       { symbol: 'TATAMOTORS', direction: 'BULLISH', effect: '+4.6% Heavy Commercial Vehicle Surge' },
       { symbol: 'HDFCBANK', direction: 'BULLISH', effect: '+3.1% Retail & MSME Credit Expansion' },
+      { symbol: 'ICICIBANK', direction: 'BULLISH', effect: '+3.0% Corporate Loan Growth' },
       { symbol: 'TCS', direction: 'BULLISH', effect: '+2.5% Broad Market Inflow' },
     ],
     workshopTakeaway:
       'Strong macroeconomic fundamentals support long-term trend continuation. Price rides above VWAP with golden crosses on all timeframes.',
+  },
+  {
+    id: 'news-day4-4',
+    candleIndex: 662,
+    category: 'Institutional Flows',
+    type: 'macro',
+    badgeColor: '#a855f7',
+    headline: 'Closing Bell Inflow Surge: FIIs Pump Record ₹9,200 Cr in Final-Hour Benchmark Index Rebalancing',
+    summary:
+      'Global emerging market indices executed their semi-annual weight increases in the final 30 minutes of trade, generating a torrential wave of market-on-close index buying across blue-chips.',
+    impactSummary: 'Final-Hour High-Volume Liquidity Surge Across All Leaders',
+    impactedStocks: [
+      { symbol: 'RELIANCE', direction: 'BULLISH', effect: '+2.8% Passive Index Allocation' },
+      { symbol: 'ICICIBANK', direction: 'BULLISH', effect: '+3.4% Institutional Inflow Wave' },
+      { symbol: 'LT', direction: 'BULLISH', effect: '+2.9% Weightage Upgrade' },
+      { symbol: 'SBIN', direction: 'BULLISH', effect: '+2.4% PSU Banking Inflow' },
+      { symbol: 'ITC', direction: 'BULLISH', effect: '+2.1% Closing Squeeze' },
+    ],
+    workshopTakeaway:
+      'The final competition sprint! Institutional rebalancing drives massive liquidity for participants closing winning breakout trades before the final gong.',
   },
 ];
