@@ -44,12 +44,12 @@ import NewsPanel from './components/NewsPanel';
 import IndicatorGuideModal from './components/IndicatorGuideModal';
 
 const SPEED_OPTIONS = [
-  { label: '1x (20m)', ms: 16000, mult: 1 },
-  { label: '2x (10m)', ms: 8000, mult: 2 },
-  { label: '4x (5m)', ms: 4000, mult: 4 },
-  { label: '8x (2.5m)', ms: 2000, mult: 8 },
-  { label: '16x (1.25m)', ms: 1000, mult: 16 },
-  { label: '32x (38s)', ms: 500, mult: 32 },
+  { label: '8x (2s - Smooth)', ms: 2000, mult: 8 },
+  { label: '16x (1s - Fast)', ms: 1000, mult: 16 },
+  { label: '4x (4s - Paced)', ms: 4000, mult: 4 },
+  { label: '2x (8s - Slow)', ms: 8000, mult: 2 },
+  { label: '1x (16s - Realtime 20m)', ms: 16000, mult: 1 },
+  { label: '32x (0.5s - Turbo)', ms: 500, mult: 32 },
 ];
 
 const OVERLAY_OPTIONS = [
@@ -103,8 +103,8 @@ export default function App() {
   const maxCandles = STOCKS.RELIANCE.data.length;
   const [simIndex, setSimIndex] = useState(SIM_INITIAL_CANDLES);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speedMs, setSpeedMs] = useState(16000);
-  const [speedMultiplier, setSpeedMultiplier] = useState(1);
+  const [speedMs, setSpeedMs] = useState(2000);
+  const [speedMultiplier, setSpeedMultiplier] = useState(8);
   const [isPhaseBreak, setIsPhaseBreak] = useState(false);
   const [phaseBreakDay, setPhaseBreakDay] = useState(null);
   const [dismissedPhaseBreakModal, setDismissedPhaseBreakModal] = useState(false);
@@ -320,127 +320,153 @@ export default function App() {
     }
   }, [participant, cash, holdings, orders, realizedPnl]);
 
-  // Connect to shared WebSocket room server
+  // Connect to shared WebSocket room server with auto-reconnect
   useEffect(() => {
     if (!participant) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    let isUnmounted = false;
+    let reconnectTimer = null;
 
-    ws.onopen = () => {
-      setWsConnected(true);
-      const eq = totalEquityRef.current;
-      const ords = ordersCountRef.current;
-      const returnPct =
-        participant.startingCash > 0
-          ? ((eq - participant.startingCash) / participant.startingCash) * 100
-          : 0;
+    const connect = () => {
+      if (isUnmounted) return;
 
-      ws.send(
-        JSON.stringify({
-          type: 'JOIN',
-          clientId,
-          name: participant.name,
-          role: participant.role,
-          moderatorPassword: participant.moderatorPassword,
-          roomCode: participant.roomCode,
-          startingCash: participant.startingCash,
-          equity: eq,
-          returnPct,
-          trades: ords,
-          maxCandles,
-        })
-      );
-    };
-
-    ws.onmessage = (event) => {
-      let msg;
-      try {
-        msg = JSON.parse(event.data);
-      } catch {
-        return;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      let wsUrl = `${protocol}//${window.location.host}/ws`;
+      // Direct connect when developing on Vite port 5173 to bypass any proxy delays
+      if (window.location.hostname === 'localhost' && window.location.port === '5173') {
+        wsUrl = 'ws://localhost:4000/ws';
       }
 
-      if (msg.type === 'JOIN_ERROR') {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (isUnmounted) {
+          ws.close();
+          return;
+        }
+        setWsConnected(true);
+        const eq = totalEquityRef.current;
+        const ords = ordersCountRef.current;
+        const returnPct =
+          participant.startingCash > 0
+            ? ((eq - participant.startingCash) / participant.startingCash) * 100
+            : 0;
+
+        ws.send(
+          JSON.stringify({
+            type: 'JOIN',
+            clientId,
+            name: participant.name,
+            role: participant.role,
+            moderatorPassword: participant.moderatorPassword,
+            roomCode: participant.roomCode,
+            startingCash: participant.startingCash,
+            equity: eq,
+            returnPct,
+            trades: ords,
+            maxCandles,
+          })
+        );
+      };
+
+      ws.onmessage = (event) => {
+        if (isUnmounted) return;
+        let msg;
         try {
-          sessionStorage.removeItem(STORAGE_SESSION_KEY);
-          sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
-          localStorage.removeItem(STORAGE_SESSION_KEY);
-          localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+          msg = JSON.parse(event.data);
         } catch {
-          // ignore
+          return;
         }
-        setParticipant(null);
-        setLoginError(msg.message || 'Access denied');
-        addToast(msg.message || 'Access denied', 'error');
-        return;
-      }
 
-      if (msg.type === 'ROOM_STATE') {
-        setSimIndex(msg.simIndex);
-        setIsPlaying(msg.isPlaying);
-        setSpeedMs(msg.speedMs);
-        if (msg.speedMultiplier) setSpeedMultiplier(msg.speedMultiplier);
-        setIsPhaseBreak((prev) => {
-          if (msg.isPhaseBreak && !prev) {
-            setDismissedPhaseBreakModal(false);
+        if (msg.type === 'JOIN_ERROR') {
+          try {
+            sessionStorage.removeItem(STORAGE_SESSION_KEY);
+            sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+            localStorage.removeItem(STORAGE_SESSION_KEY);
+            localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+          } catch {
+            // ignore
           }
-          return Boolean(msg.isPhaseBreak);
-        });
-        setPhaseBreakDay(msg.phaseBreakDay || null);
-        setParticipantCount(msg.participantCount);
-        setLiveLeaderboard(msg.leaderboard || []);
-        setCompetitionEnded((prevEnded) => {
-          if (msg.competitionEnded && !prevEnded) {
-            setShowWinnerModal(true);
-          }
-          if (!msg.competitionEnded) {
-            setShowWinnerModal(false);
-          }
-          return Boolean(msg.competitionEnded);
-        });
-        if (msg.notice) {
-          addToast(msg.notice, 'info');
+          setParticipant(null);
+          setLoginError(msg.message || 'Access denied');
+          addToast(msg.message || 'Access denied', 'error');
+          return;
         }
-      } else if (msg.type === 'TICK') {
-        setSimIndex(msg.simIndex);
-        setIsPlaying(msg.isPlaying);
-      } else if (msg.type === 'LEADERBOARD_UPDATE') {
-        setLiveLeaderboard(msg.leaderboard || []);
-        if (msg.participantCount) setParticipantCount(msg.participantCount);
-      } else if (msg.type === 'ROOM_RESET') {
-        try {
-          sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
-          localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
-        } catch {
-          // ignore
+
+        if (msg.type === 'ROOM_STATE') {
+          setSimIndex(msg.simIndex);
+          setIsPlaying(msg.isPlaying);
+          setSpeedMs(msg.speedMs);
+          if (msg.speedMultiplier) setSpeedMultiplier(msg.speedMultiplier);
+          setIsPhaseBreak((prev) => {
+            if (msg.isPhaseBreak && !prev) {
+              setDismissedPhaseBreakModal(false);
+            }
+            return Boolean(msg.isPhaseBreak);
+          });
+          setPhaseBreakDay(msg.phaseBreakDay || null);
+          setParticipantCount(msg.participantCount);
+          setLiveLeaderboard(msg.leaderboard || []);
+          setCompetitionEnded((prevEnded) => {
+            if (msg.competitionEnded && !prevEnded) {
+              setShowWinnerModal(true);
+            }
+            if (!msg.competitionEnded) {
+              setShowWinnerModal(false);
+            }
+            return Boolean(msg.competitionEnded);
+          });
+          if (msg.notice) {
+            addToast(msg.notice, 'info');
+          }
+        } else if (msg.type === 'TICK') {
+          setSimIndex(msg.simIndex);
+          setIsPlaying(msg.isPlaying);
+        } else if (msg.type === 'LEADERBOARD_UPDATE') {
+          setLiveLeaderboard(msg.leaderboard || []);
+          if (msg.participantCount) setParticipantCount(msg.participantCount);
+        } else if (msg.type === 'ROOM_RESET') {
+          try {
+            sessionStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+            localStorage.removeItem(STORAGE_PORTFOLIO_KEY);
+          } catch {
+            // ignore
+          }
+          setCash(participant.startingCash);
+          setHoldings({});
+          setOrders([]);
+          setRealizedPnl(0);
+          setIsPhaseBreak(false);
+          setPhaseBreakDay(null);
+          setDismissedPhaseBreakModal(false);
+          setCompetitionEnded(false);
+          setShowWinnerModal(false);
+          addToast('Competition reset by moderator — fresh round started!', 'info');
         }
-        setCash(participant.startingCash);
-        setHoldings({});
-        setOrders([]);
-        setRealizedPnl(0);
-        setIsPhaseBreak(false);
-        setPhaseBreakDay(null);
-        setDismissedPhaseBreakModal(false);
-        setCompetitionEnded(false);
-        setShowWinnerModal(false);
-        addToast('Competition reset by moderator — fresh round started!', 'info');
-      }
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        if (!isUnmounted) {
+          reconnectTimer = setTimeout(connect, 1500);
+        }
+      };
+
+      ws.onerror = () => {
+        setWsConnected(false);
+      };
     };
 
-    ws.onclose = () => {
-      setWsConnected(false);
-    };
-
-    ws.onerror = () => {
-      setWsConnected(false);
-    };
+    connect();
 
     return () => {
-      ws.close();
-      wsRef.current = null;
+      isUnmounted = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
       setWsConnected(false);
     };
   }, [participant, clientId, maxCandles, addToast]);
@@ -488,6 +514,13 @@ export default function App() {
 
   // Instructor control helper (sends to server when connected, or local fallback)
   const sendControl = (action, extra = {}) => {
+    // Optimistic UI response for play/pause to eliminate any perceived click lag
+    if (action === 'PLAY') {
+      setIsPlaying(true);
+    } else if (action === 'PAUSE') {
+      setIsPlaying(false);
+    }
+
     if (wsConnected && wsRef.current && wsRef.current.readyState === 1) {
       wsRef.current.send(
         JSON.stringify({
@@ -505,6 +538,8 @@ export default function App() {
         setIsPhaseBreak(false);
         setPhaseBreakDay(null);
         setSimIndex((i) => i + 1);
+      } else {
+        setSimIndex((i) => Math.min(maxCandles - 1, i + 1));
       }
       setIsPlaying(true);
     } else if (action === 'START_NEXT_PHASE') {

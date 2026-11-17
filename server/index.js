@@ -92,12 +92,13 @@ function getOrCreateRoom(roomCode, maxCandles = DEFAULT_MAX_CANDLES) {
       simIndex: INITIAL_CANDLES,
       maxCandles,
       isPlaying: false,
-      speedMs: BASE_SPEED_MS, // 16000ms = 20 minutes per 75-candle day at 1x
-      speedMultiplier: 1,
+      speedMs: 2000, // Default 2s per candle for active, smooth simulation
+      speedMultiplier: 8,
       isPhaseBreak: false,
       phaseBreakDay: null,
       competitionEnded: false,
       timer: null,
+      leaderboardTimer: null,
       participants: new Map(), // clientId -> participantData
       sockets: new Map(), // clientId -> WebSocket
     });
@@ -160,67 +161,80 @@ function stopRoomTimer(room) {
   }
 }
 
-function startRoomTimer(room) {
+function tickRoom(room) {
+  if (!room.isPlaying || room.competitionEnded) return;
+
+  // Check if current candle reaches the end of Phase 1, 2, or 3
+  if (room.simIndex === 449) {
+    // Day 1 ended
+    room.isPlaying = false;
+    room.isPhaseBreak = true;
+    room.phaseBreakDay = 1;
+    stopRoomTimer(room);
+    broadcastRoomState(room, {
+      notice: 'Day 1 Complete! Market is now closed for Study & Analysis Break.',
+    });
+    return;
+  }
+  if (room.simIndex === 524) {
+    // Day 2 ended
+    room.isPlaying = false;
+    room.isPhaseBreak = true;
+    room.phaseBreakDay = 2;
+    stopRoomTimer(room);
+    broadcastRoomState(room, {
+      notice: 'Day 2 Complete! Market is now closed for Study & Analysis Break.',
+    });
+    return;
+  }
+  if (room.simIndex === 599) {
+    // Day 3 ended
+    room.isPlaying = false;
+    room.isPhaseBreak = true;
+    room.phaseBreakDay = 3;
+    stopRoomTimer(room);
+    broadcastRoomState(room, {
+      notice: 'Day 3 Complete! Market is now closed for Study & Analysis Break.',
+    });
+    return;
+  }
+  if (room.simIndex >= COMPETITION_END_CANDLE) {
+    // Day 4 ended -> Grand finale!
+    room.isPlaying = false;
+    room.isPhaseBreak = false;
+    room.competitionEnded = true;
+    stopRoomTimer(room);
+    broadcastRoomState(room, {
+      notice: 'Competition Finished! The final closing bell has rung. Check the leaderboard for the winner!',
+    });
+    return;
+  }
+
+  room.simIndex += 1;
+  const phase = getPhaseInfo(room.simIndex);
+  broadcastEvent(room, 'TICK', {
+    simIndex: room.simIndex,
+    isPlaying: room.isPlaying,
+    currentDay: phase.day,
+    phaseName: phase.name,
+    hasNews: phase.hasNews,
+    showPatterns: phase.showPatterns,
+  });
+}
+
+function startRoomTimer(room, immediate = false) {
   stopRoomTimer(room);
   if (!room.isPlaying || room.competitionEnded) return;
 
-  room.timer = setInterval(() => {
-    // Check if current candle reaches the end of Phase 1, 2, or 3
-    if (room.simIndex === 449) {
-      // Day 1 ended
-      room.isPlaying = false;
-      room.isPhaseBreak = true;
-      room.phaseBreakDay = 1;
-      stopRoomTimer(room);
-      broadcastRoomState(room, {
-        notice: 'Day 1 Complete! Market is now closed for Study & Analysis Break.',
-      });
-      return;
-    }
-    if (room.simIndex === 524) {
-      // Day 2 ended
-      room.isPlaying = false;
-      room.isPhaseBreak = true;
-      room.phaseBreakDay = 2;
-      stopRoomTimer(room);
-      broadcastRoomState(room, {
-        notice: 'Day 2 Complete! Market is now closed for Study & Analysis Break.',
-      });
-      return;
-    }
-    if (room.simIndex === 599) {
-      // Day 3 ended
-      room.isPlaying = false;
-      room.isPhaseBreak = true;
-      room.phaseBreakDay = 3;
-      stopRoomTimer(room);
-      broadcastRoomState(room, {
-        notice: 'Day 3 Complete! Market is now closed for Study & Analysis Break.',
-      });
-      return;
-    }
-    if (room.simIndex >= COMPETITION_END_CANDLE) {
-      // Day 4 ended -> Grand finale!
-      room.isPlaying = false;
-      room.isPhaseBreak = false;
-      room.competitionEnded = true;
-      stopRoomTimer(room);
-      broadcastRoomState(room, {
-        notice: 'Competition Finished! The final closing bell has rung. Check the leaderboard for the winner!',
-      });
-      return;
-    }
+  if (immediate) {
+    // Advance candle immediately so user sees instant reaction with zero lag
+    tickRoom(room);
+  }
 
-    room.simIndex += 1;
-    const phase = getPhaseInfo(room.simIndex);
-    broadcastEvent(room, 'TICK', {
-      simIndex: room.simIndex,
-      isPlaying: room.isPlaying,
-      currentDay: phase.day,
-      phaseName: phase.name,
-      hasNews: phase.hasNews,
-      showPatterns: phase.showPatterns,
-    });
+  if (!room.isPlaying || room.competitionEnded) return;
+
+  room.timer = setInterval(() => {
+    tickRoom(room);
   }, room.speedMs);
 }
 
@@ -252,6 +266,26 @@ wss.on('connection', (ws) => {
             })
           );
           return;
+        }
+
+        // If the same moderator is reconnecting (e.g. refreshed page), replace old session
+        for (const [id, p] of room.participants.entries()) {
+          if (
+            p.role === 'instructor' &&
+            p.id !== currentClientId &&
+            p.name.toLowerCase() === (msg.name || '').trim().toLowerCase()
+          ) {
+            const oldSock = room.sockets.get(id);
+            if (oldSock) {
+              try {
+                oldSock.close();
+              } catch {
+                // ignore
+              }
+              room.sockets.delete(id);
+            }
+            room.participants.delete(id);
+          }
         }
 
         // Check how many other moderators are actively connected with open sockets
@@ -314,10 +348,15 @@ wss.on('connection', (ws) => {
         p.equity = msg.equity;
         p.returnPct = msg.returnPct;
         p.trades = msg.trades;
-        broadcastEvent(currentRoom, 'LEADERBOARD_UPDATE', {
-          leaderboard: buildLeaderboard(currentRoom),
-          participantCount: currentRoom.participants.size,
-        });
+        if (!currentRoom.leaderboardTimer) {
+          currentRoom.leaderboardTimer = setTimeout(() => {
+            currentRoom.leaderboardTimer = null;
+            broadcastEvent(currentRoom, 'LEADERBOARD_UPDATE', {
+              leaderboard: buildLeaderboard(currentRoom),
+              participantCount: currentRoom.participants.size,
+            });
+          }, 1000);
+        }
       }
       return;
     }
@@ -343,8 +382,8 @@ wss.on('connection', (ws) => {
           currentRoom.simIndex += 1;
         }
         currentRoom.isPlaying = true;
-        startRoomTimer(currentRoom);
         broadcastRoomState(currentRoom);
+        startRoomTimer(currentRoom, true); // Immediate tick for instant reaction!
       } else if (action === 'START_NEXT_PHASE') {
         currentRoom.isPhaseBreak = false;
         currentRoom.phaseBreakDay = null;
@@ -352,8 +391,8 @@ wss.on('connection', (ws) => {
         else if (currentRoom.simIndex === 524) currentRoom.simIndex = 525;
         else if (currentRoom.simIndex === 599) currentRoom.simIndex = 600;
         currentRoom.isPlaying = true;
-        startRoomTimer(currentRoom);
         broadcastRoomState(currentRoom);
+        startRoomTimer(currentRoom, true); // Immediate tick for instant reaction!
       } else if (action === 'PAUSE') {
         currentRoom.isPlaying = false;
         stopRoomTimer(currentRoom);

@@ -81,6 +81,7 @@ export default function TradingChart({
   const prevSymbolRef = useRef(symbol);
   const prevTimeframeRef = useRef(selectedTimeframe);
   const prevLenRef = useRef(0);
+  const prevOscTypeRef = useRef(null);
 
   const [hoveredCandle, setHoveredCandle] = useState(null);
   const [chartApi, setChartApi] = useState(null);
@@ -528,46 +529,54 @@ export default function TradingChart({
     const oscChart = oscChartRef.current;
     if (!oscChart || !activeOscillator || visibleData.length === 0) return;
 
-    // Clear previous series
-    for (const s of oscSeriesRef.current) {
-      try {
-        oscChart.removeSeries(s);
-      } catch {
-        // already removed
+    const oscTypeChanged = prevOscTypeRef.current !== activeOscillator || oscSeriesRef.current.length === 0;
+
+    if (oscTypeChanged) {
+      // Clear previous series only when the oscillator type changes
+      for (const s of oscSeriesRef.current) {
+        try {
+          oscChart.removeSeries(s);
+        } catch {
+          // already removed
+        }
       }
+      oscSeriesRef.current = [];
+      prevOscTypeRef.current = activeOscillator;
     }
-    oscSeriesRef.current = [];
 
     if (activeOscillator === 'RSI') {
       const rsi = calculateRSI(visibleData, 14);
-      const rsiSeries = oscChart.addSeries(LineSeries, {
-        color: '#f59e0b',
-        lineWidth: 2,
-        title: 'RSI (14)',
-      });
-      rsiSeries.setData(toSeriesPoints(visibleData, rsi));
-      rsiSeries.createPriceLine({
-        price: 70,
-        color: 'rgba(239, 68, 68, 0.55)',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: 'OB 70',
-      });
-      rsiSeries.createPriceLine({
-        price: 30,
-        color: 'rgba(16, 185, 129, 0.55)',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: 'OS 30',
-      });
-      oscSeriesRef.current = [rsiSeries];
+      const points = toSeriesPoints(visibleData, rsi);
+
+      if (oscTypeChanged) {
+        const rsiSeries = oscChart.addSeries(LineSeries, {
+          color: '#f59e0b',
+          lineWidth: 2,
+          title: 'RSI (14)',
+        });
+        rsiSeries.setData(points);
+        rsiSeries.createPriceLine({
+          price: 70,
+          color: 'rgba(239, 68, 68, 0.55)',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: 'OB 70',
+        });
+        rsiSeries.createPriceLine({
+          price: 30,
+          color: 'rgba(16, 185, 129, 0.55)',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: 'OS 30',
+        });
+        oscSeriesRef.current = [rsiSeries];
+      } else if (oscSeriesRef.current[0]) {
+        oscSeriesRef.current[0].setData(points);
+      }
     } else if (activeOscillator === 'MACD') {
       const { macdLine, signalLine, histogram } = calculateMACD(visibleData, 12, 26, 9);
-      const histSeries = oscChart.addSeries(HistogramSeries, {
-        title: 'Histogram',
-      });
       const histPoints = [];
       for (let i = 0; i < visibleData.length; i++) {
         if (histogram[i] !== null) {
@@ -579,65 +588,91 @@ export default function TradingChart({
           });
         }
       }
-      histSeries.setData(histPoints);
+      const macdPoints = toSeriesPoints(visibleData, macdLine);
+      const sigPoints = toSeriesPoints(visibleData, signalLine);
 
-      const macdSeries = oscChart.addSeries(LineSeries, {
-        color: '#3b82f6',
-        lineWidth: 2,
-        title: 'MACD',
-      });
-      macdSeries.setData(toSeriesPoints(visibleData, macdLine));
+      if (oscTypeChanged) {
+        const histSeries = oscChart.addSeries(HistogramSeries, {
+          title: 'Histogram',
+        });
+        histSeries.setData(histPoints);
 
-      const sigSeries = oscChart.addSeries(LineSeries, {
-        color: '#f97316',
-        lineWidth: 1.5,
-        title: 'Signal',
-      });
-      sigSeries.setData(toSeriesPoints(visibleData, signalLine));
+        const macdSeries = oscChart.addSeries(LineSeries, {
+          color: '#3b82f6',
+          lineWidth: 2,
+          title: 'MACD',
+        });
+        macdSeries.setData(macdPoints);
 
-      oscSeriesRef.current = [histSeries, macdSeries, sigSeries];
+        const sigSeries = oscChart.addSeries(LineSeries, {
+          color: '#f97316',
+          lineWidth: 1.5,
+          title: 'Signal',
+        });
+        sigSeries.setData(sigPoints);
+
+        oscSeriesRef.current = [histSeries, macdSeries, sigSeries];
+      } else {
+        if (oscSeriesRef.current[0]) oscSeriesRef.current[0].setData(histPoints);
+        if (oscSeriesRef.current[1]) oscSeriesRef.current[1].setData(macdPoints);
+        if (oscSeriesRef.current[2]) oscSeriesRef.current[2].setData(sigPoints);
+      }
     } else if (activeOscillator === 'STOCH') {
       const { k, d } = calculateStochastic(visibleData, 14, 3);
-      const kSeries = oscChart.addSeries(LineSeries, {
-        color: '#38bdf8',
-        lineWidth: 2,
-        title: '%K',
-      });
-      kSeries.setData(toSeriesPoints(visibleData, k));
-      kSeries.createPriceLine({
-        price: 80,
-        color: 'rgba(239, 68, 68, 0.5)',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: '80',
-      });
-      kSeries.createPriceLine({
-        price: 20,
-        color: 'rgba(16, 185, 129, 0.5)',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: '20',
-      });
+      const kPoints = toSeriesPoints(visibleData, k);
+      const dPoints = toSeriesPoints(visibleData, d);
 
-      const dSeries = oscChart.addSeries(LineSeries, {
-        color: '#f43f5e',
-        lineWidth: 1.5,
-        title: '%D',
-      });
-      dSeries.setData(toSeriesPoints(visibleData, d));
+      if (oscTypeChanged) {
+        const kSeries = oscChart.addSeries(LineSeries, {
+          color: '#38bdf8',
+          lineWidth: 2,
+          title: '%K',
+        });
+        kSeries.setData(kPoints);
+        kSeries.createPriceLine({
+          price: 80,
+          color: 'rgba(239, 68, 68, 0.5)',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: '80',
+        });
+        kSeries.createPriceLine({
+          price: 20,
+          color: 'rgba(16, 185, 129, 0.5)',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: '20',
+        });
 
-      oscSeriesRef.current = [kSeries, dSeries];
+        const dSeries = oscChart.addSeries(LineSeries, {
+          color: '#f43f5e',
+          lineWidth: 1.5,
+          title: '%D',
+        });
+        dSeries.setData(dPoints);
+
+        oscSeriesRef.current = [kSeries, dSeries];
+      } else {
+        if (oscSeriesRef.current[0]) oscSeriesRef.current[0].setData(kPoints);
+        if (oscSeriesRef.current[1]) oscSeriesRef.current[1].setData(dPoints);
+      }
     } else if (activeOscillator === 'ATR') {
       const atr = calculateATR(visibleData, 14);
-      const atrSeries = oscChart.addSeries(LineSeries, {
-        color: '#a78bfa',
-        lineWidth: 2,
-        title: 'ATR (14)',
-      });
-      atrSeries.setData(toSeriesPoints(visibleData, atr));
-      oscSeriesRef.current = [atrSeries];
+      const atrPoints = toSeriesPoints(visibleData, atr);
+
+      if (oscTypeChanged) {
+        const atrSeries = oscChart.addSeries(LineSeries, {
+          color: '#a78bfa',
+          lineWidth: 2,
+          title: 'ATR (14)',
+        });
+        atrSeries.setData(atrPoints);
+        oscSeriesRef.current = [atrSeries];
+      } else if (oscSeriesRef.current[0]) {
+        oscSeriesRef.current[0].setData(atrPoints);
+      }
     }
 
     // Align oscillator range with main chart
