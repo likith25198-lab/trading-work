@@ -63,7 +63,7 @@ const server = http.createServer((req, res) => {
   }
 
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('TradeLab Workshop WebSocket server running');
+  res.end('Finnacle Workshop WebSocket server running');
 });
 
 // WebSocket Server attached to HTTP server
@@ -482,7 +482,7 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`TradeLab Workshop Web & WebSocket server listening on http://0.0.0.0:${PORT}`);
+  console.log(`Finnacle Workshop Web & WebSocket server listening on http://0.0.0.0:${PORT}`);
 });
 
 

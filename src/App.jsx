@@ -5,7 +5,6 @@ import {
   SkipForward,
   RotateCcw,
   BookOpen,
-  TrendingUp,
   LogOut,
   Lightbulb,
   History,
@@ -945,9 +944,21 @@ export default function App() {
 
       {/* Header */}
       <header className="app-header">
-        <div className="logo">
-          <TrendingUp size={22} />
-          <span>TradeLab</span>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img
+            src="/finnacle-logo.png"
+            alt="Finnacle Logo"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              objectFit: 'contain',
+              background: '#ffffff',
+              padding: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            }}
+          />
+          <span style={{ fontWeight: 800, letterSpacing: -0.2 }}>Finnacle Workshop</span>
           <span
             style={{
               fontSize: 11,

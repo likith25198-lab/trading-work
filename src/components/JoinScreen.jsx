@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, BarChart3, Zap, Users, ShieldCheck } from 'lucide-react';
+import { BarChart3, Zap, Users, ShieldCheck } from 'lucide-react';
 
 export default function JoinScreen({ onJoin, initialError = '' }) {
   const [name, setName] = useState('');
@@ -36,23 +36,22 @@ export default function JoinScreen({ onJoin, initialError = '' }) {
     <div className="login-screen">
       <div className="login-card" style={{ width: 470 }}>
         <div className="login-logo">
-          <div
+          <img
+            src="/finnacle-logo.png"
+            alt="Finnacle Logo"
             style={{
-              width: 56,
-              height: 56,
-              margin: '0 auto',
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              boxShadow: '0 10px 25px rgba(59, 130, 246, 0.35)',
+              width: 72,
+              height: 72,
+              margin: '0 auto 12px',
+              borderRadius: 16,
+              objectFit: 'contain',
+              background: '#ffffff',
+              padding: 6,
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.45)',
+              display: 'block',
             }}
-          >
-            <TrendingUp size={30} />
-          </div>
-          <h1>TradeLab Workshop</h1>
+          />
+          <h1>Finnacle Workshop</h1>
           <p>Pre-programmed Live Stock Market &amp; Technical Analysis Simulator</p>
           <span
             style={{
