@@ -844,6 +844,20 @@ export default function TradingChart({
             </span>
           </div>
           <div className="ohlcv-item">
+            <span className="ohlcv-label">Chg</span>
+            <span
+              className={`ohlcv-value ${displayCandle.close >= displayCandle.open ? 'positive' : 'negative'
+                }`}
+            >
+              {displayCandle.open > 0
+                ? `${displayCandle.close >= displayCandle.open ? '+' : ''}${(
+                    ((displayCandle.close - displayCandle.open) / displayCandle.open) *
+                    100
+                  ).toFixed(2)}%`
+                : '0.00%'}
+            </span>
+          </div>
+          <div className="ohlcv-item">
             <span className="ohlcv-label">Vol</span>
             <span className="ohlcv-value">{formatNumber(displayCandle.volume)}</span>
           </div>

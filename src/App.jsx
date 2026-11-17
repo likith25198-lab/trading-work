@@ -274,10 +274,16 @@ export default function App() {
   );
 
   const latestCandle = visibleData[visibleData.length - 1];
-  const firstSessionCandle = visibleData[0];
   const currentPrice = latestCandle.close;
-  const sessionChangePct =
-    ((currentPrice - firstSessionCandle.open) / firstSessionCandle.open) * 100;
+
+  // Day-specific open and price move (calculated separately for each day)
+  const currentDayStartIdx = Math.max(0, Math.floor(simIndex / 75) * 75);
+  const currentDayOpen = currentStock.data[currentDayStartIdx]?.open || latestCandle.open;
+  const dayChangePct =
+    currentDayOpen > 0
+      ? ((currentPrice - currentDayOpen) / currentDayOpen) * 100
+      : 0;
+  const dayChangeAmount = currentPrice - currentDayOpen;
 
   // Map of current prices for all stocks
   const currentPrices = useMemo(() => {
@@ -1318,22 +1324,28 @@ export default function App() {
               <span className="current-price-value">₹{currentPrice.toFixed(2)}</span>
               <span
                 className={`current-price-change ${
-                  sessionChangePct >= 0 ? 'positive' : 'negative'
+                  dayChangePct >= 0 ? 'positive' : 'negative'
                 }`}
               >
-                {formatPercent(sessionChangePct)}
+                {dayChangeAmount >= 0 ? '+' : ''}₹{dayChangeAmount.toFixed(2)} ({formatPercent(dayChangePct)})
               </span>
             </div>
           </div>
 
-          <div className="sidebar-header">Workshop Watchlist</div>
+          <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Workshop Watchlist</span>
+            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600, textTransform: 'none' }}>
+              Day's % Change
+            </span>
+          </div>
           <div className="stock-list">
             {STOCK_LIST.map((stock) => {
               const idx = Math.min(simIndex, stock.data.length - 1);
               const cur = stock.data[idx].close;
               const prev = stock.data[Math.max(0, idx - 1)].close;
-              const base = stock.data[0].open;
-              const pct = ((cur - base) / base) * 100;
+              const stockDayStartIdx = Math.max(0, Math.floor(idx / 75) * 75);
+              const dayBase = stock.data[stockDayStartIdx]?.open || cur;
+              const dayPct = dayBase > 0 ? ((cur - dayBase) / dayBase) * 100 : 0;
               const tickUp = cur >= prev;
 
               return (
@@ -1357,10 +1369,10 @@ export default function App() {
                     </div>
                     <div
                       className={`stock-change ${
-                        pct >= 0 ? 'positive' : 'negative'
+                        dayPct >= 0 ? 'positive' : 'negative'
                       }`}
                     >
-                      {formatPercent(pct)}
+                      {formatPercent(dayPct)}
                     </div>
                   </div>
                 </div>
